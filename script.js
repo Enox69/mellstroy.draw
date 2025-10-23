@@ -59,9 +59,13 @@ function loadPixels(snapshot) {
 }
 
 if (db) {
-    const pixelsRef = window.firebase.ref(db, 'pixels');
-    window.firebase.onValue(pixelsRef, loadPixels);
-    console.log('Firebase listener started');
+    try {
+        const pixelsRef = window.firebase.ref(db, 'pixels');
+        window.firebase.onValue(pixelsRef, loadPixels);
+        console.log('Firebase listener started');
+    } catch (error) {
+        console.log('Error starting listener:', error.message);
+    }
 } else {
     console.log('No Firebase - local mode');
 }
@@ -84,7 +88,7 @@ canvas.addEventListener('click', (e) => {
                 window.firebase.set(pixelRef, { x, y, color: currentColor });
                 console.log('Saved to Firebase');
             } catch (error) {
-                console.log('Error saving:', error.message);
+                console.log('Error saving to Firebase:', error.message);
             }
         } else {
             console.log('Saved locally');
@@ -109,7 +113,7 @@ clearButton.addEventListener('click', () => {
             window.firebase.remove(pixelsRef);
             console.log('DB cleared');
         } catch (error) {
-            console.log('Error clearing:', error.message);
+            console.log('Error clearing DB:', error.message);
         }
     }
     console.log('Cleared locally');
