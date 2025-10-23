@@ -2,14 +2,10 @@ const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const colorPicker = document.getElementById('color');
 const clearButton = document.getElementById('clear');
-const zoomInButton = document.getElementById('zoomIn');
-const zoomOutButton = document.getElementById('zoomOut');
 
 let currentColor = colorPicker.value;
-let zoom = 1;
-const maxZoom = 4;
-const minZoom = 0.5;
-const pixelSize = 5; // Квадратик 5x5, как в Not Pixel
+// Размер пикселя фиксированный 1x1
+const pixelSize = 1;
 
 // Функция для рисования текста
 function drawText() {
@@ -48,25 +44,7 @@ function isPixelInText(x, y) {
     return alpha > 128;
 }
 
-// Функция для рисования сетки (при зуме >1, как в Not Pixel)
-function drawGrid() {
-    if (zoom <= 1) return; // Сетка только при приближении
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)'; // Полупрозрачная белая сетка
-    ctx.lineWidth = 0.5;
-    const step = pixelSize / zoom; // Размер квадратика с зумом
-    for (let x = 0; x < canvas.width; x += step) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, canvas.height);
-        ctx.stroke();
-    }
-    for (let y = 0; y < canvas.height; y += step) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(canvas.width, y);
-        ctx.stroke();
-    }
-}
+
 
 // Инициализация
 drawText();
@@ -74,10 +52,8 @@ drawText();
 // Рисование по клику (снап к ближайшему квадратику)
 canvas.addEventListener('click', (e) => {
     const rect = canvas.getBoundingClientRect();
-    let rawX = e.clientX - rect.left;
-    let rawY = e.clientY - rect.top;
-    let x = Math.floor(rawX / zoom / pixelSize) * pixelSize; // Снап к квадратику
-    let y = Math.floor(rawY / zoom / pixelSize) * pixelSize;
+    let x = Math.floor(e.clientX - rect.left);
+    let y = Math.floor(e.clientY - rect.top);
 
     if (isPixelInText(x, y)) {
         ctx.fillStyle = currentColor;
@@ -91,27 +67,6 @@ canvas.addEventListener('click', (e) => {
 // Зум колёсиком мыши
 canvas.addEventListener('wheel', (e) => {
     e.preventDefault();
-    const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    zoom *= delta;
-    zoom = Math.max(minZoom, Math.min(maxZoom, zoom));
-    canvas.style.transform = `scale(${zoom})`;
-    drawGrid(); // Перерисовка сетки при зуме
-    console.log('Zoom:', zoom);
-});
-
-// Кнопки зума
-zoomInButton.addEventListener('click', () => {
-    zoom = Math.min(maxZoom, zoom * 1.2);
-    canvas.style.transform = `scale(${zoom})`;
-    drawGrid();
-    console.log('Zoom in:', zoom);
-});
-
-zoomOutButton.addEventListener('click', () => {
-    zoom = Math.max(minZoom, zoom / 1.2);
-    canvas.style.transform = `scale(${zoom})`;
-    drawGrid();
-    console.log('Zoom out:', zoom);
 });
 
 // Изменение цвета
