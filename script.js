@@ -6,18 +6,18 @@ const clearButton = document.getElementById('clear');
 let currentColor = colorPicker.value;
 let db = window.db;
 
-// Функция для рисования текста (теперь "MELLSTROY GAME")
+// Функция для рисования текста
 function drawText() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.font = 'bold 48px Arial';
     ctx.fillStyle = 'white';
     ctx.textAlign = 'center';
-    ctx.fillText('MELLSTROY', canvas.width / 2, canvas.height / 2 - 30); // Первая строка
-    ctx.fillText('GAME', canvas.width / 2, canvas.height / 2 + 30); // Вторая строка
+    ctx.fillText('MELLSTROY', canvas.width / 2, canvas.height / 2 - 30);
+    ctx.fillText('GAME', canvas.width / 2, canvas.height / 2 + 30);
     console.log('Text drawn: MELLSTROY GAME');
 }
 
-// Маска для проверки области текста (обновлена)
+// Маска для проверки области текста
 function createTextMask() {
     const maskCanvas = document.createElement('canvas');
     maskCanvas.width = canvas.width;
