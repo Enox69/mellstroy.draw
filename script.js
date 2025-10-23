@@ -2,9 +2,14 @@ const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const colorPicker = document.getElementById('color');
 const clearButton = document.getElementById('clear');
+const zoomInButton = document.getElementById('zoomIn');
+const zoomOutButton = document.getElementById('zoomOut');
 
 let currentColor = colorPicker.value;
-let db = window.db;
+let zoom = 1;
+const maxZoom = 4;
+const minZoom = 0.5;
+const pixelSize = 5; // Квадратик 5x5, как в Not Pixel
 
 // Функция для рисования текста
 function drawText() {
@@ -14,10 +19,9 @@ function drawText() {
     ctx.textAlign = 'center';
     ctx.fillText('MELLSTROY', canvas.width / 2, canvas.height / 2 - 30);
     ctx.fillText('GAME', canvas.width / 2, canvas.height / 2 + 30);
-    console.log('Text drawn: MELLSTROY GAME');
 }
 
-// Маска для проверки области текста
+// Маска для проверки области текста (адаптирована под pixelSize)
 function createTextMask() {
     const maskCanvas = document.createElement('canvas');
     maskCanvas.width = canvas.width;
@@ -32,73 +36,85 @@ function createTextMask() {
 }
 
 const textMask = createTextMask();
-console.log('Mask ready');
 
-// Проверка пикселя в тексте
+// Проверка, является ли пиксель частью текста (с учётом pixelSize)
 function isPixelInText(x, y) {
-    if (x < 0 || y < 0 || x >= canvas.width || y >= canvas.height) return false;
-    const index = (Math.floor(y) * textMask.width + Math.floor(x)) * 4;
+    // Проверяем центр квадратика
+    const centerX = x + Math.floor(pixelSize / 2);
+    const centerY = y + Math.floor(pixelSize / 2);
+    if (centerX < 0 || centerY < 0 || centerX >= canvas.width || centerY >= canvas.height) return false;
+    const index = (Math.floor(centerY) * textMask.width + Math.floor(centerX)) * 4;
     const alpha = textMask.data[index + 3];
     return alpha > 128;
+}
+
+// Функция для рисования сетки (при зуме >1, как в Not Pixel)
+function drawGrid() {
+    if (zoom <= 1) return; // Сетка только при приближении
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)'; // Полупрозрачная белая сетка
+    ctx.lineWidth = 0.5;
+    const step = pixelSize / zoom; // Размер квадратика с зумом
+    for (let x = 0; x < canvas.width; x += step) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+    }
+    for (let y = 0; y < canvas.height; y += step) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+    }
 }
 
 // Инициализация
 drawText();
 
-// Загрузка пикселей из Firebase
-function loadPixels(snapshot) {
-    drawText(); // Текст сверху
-    if (snapshot) {
-        snapshot.forEach((child) => {
-            const data = child.val();
-            ctx.fillStyle = data.color;
-            ctx.fillRect(data.x, data.y, 1, 1);
-        });
-    }
-    console.log('Loaded from DB');
-}
-
-if (db) {
-    try {
-        const pixelsRef = window.firebase.ref(db, 'pixels');
-        window.firebase.onValue(pixelsRef, loadPixels);
-        console.log('Firebase listener started');
-    } catch (error) {
-        console.log('Error starting listener:', error.message);
-    }
-} else {
-    console.log('No Firebase - local mode');
-}
-
-// Рисование по клику
+// Рисование по клику (снап к ближайшему квадратику)
 canvas.addEventListener('click', (e) => {
     const rect = canvas.getBoundingClientRect();
-    const x = Math.floor(e.clientX - rect.left);
-    const y = Math.floor(e.clientY - rect.top);
-
-    console.log(`Click at (${x}, ${y}) - in text? ${isPixelInText(x, y)}`);
+    let rawX = e.clientX - rect.left;
+    let rawY = e.clientY - rect.top;
+    let x = Math.floor(rawX / zoom / pixelSize) * pixelSize; // Снап к квадратику
+    let y = Math.floor(rawY / zoom / pixelSize) * pixelSize;
 
     if (isPixelInText(x, y)) {
         ctx.fillStyle = currentColor;
-        ctx.fillRect(x, y, 1, 1); // Пиксель
-
-        if (db) {
-            try {
-                const pixelRef = window.firebase.ref(db, `pixels/${x}_${y}`);
-                window.firebase.set(pixelRef, { x, y, color: currentColor });
-                console.log('Saved to Firebase');
-            } catch (error) {
-                console.log('Error saving to Firebase:', error.message);
-            }
-        } else {
-            console.log('Saved locally');
-        }
+        ctx.fillRect(x, y, pixelSize, pixelSize); // Заполняем квадратик
+        console.log('Drawn square at', x, y);
     } else {
-        console.log('Outside text');
+        console.log('Click outside text');
     }
 });
 
-// Цвет
+// Зум колёсиком мыши
+canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    zoom *= delta;
+    zoom = Math.max(minZoom, Math.min(maxZoom, zoom));
+    canvas.style.transform = `scale(${zoom})`;
+    drawGrid(); // Перерисовка сетки при зуме
+    console.log('Zoom:', zoom);
+});
+
+// Кнопки зума
+zoomInButton.addEventListener('click', () => {
+    zoom = Math.min(maxZoom, zoom * 1.2);
+    canvas.style.transform = `scale(${zoom})`;
+    drawGrid();
+    console.log('Zoom in:', zoom);
+});
+
+zoomOutButton.addEventListener('click', () => {
+    zoom = Math.max(minZoom, zoom / 1.2);
+    canvas.style.transform = `scale(${zoom})`;
+    drawGrid();
+    console.log('Zoom out:', zoom);
+});
+
+// Изменение цвета
 colorPicker.addEventListener('input', () => {
     currentColor = colorPicker.value;
     console.log('Color:', currentColor);
@@ -107,14 +123,5 @@ colorPicker.addEventListener('input', () => {
 // Очистка
 clearButton.addEventListener('click', () => {
     drawText();
-    if (db) {
-        try {
-            const pixelsRef = window.firebase.ref(db, 'pixels');
-            window.firebase.remove(pixelsRef);
-            console.log('DB cleared');
-        } catch (error) {
-            console.log('Error clearing DB:', error.message);
-        }
-    }
-    console.log('Cleared locally');
+    console.log('Cleared');
 });

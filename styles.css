@@ -5,16 +5,19 @@ body {
     align-items: center;
     height: 100vh;
     margin: 0;
+    overflow: auto;
 }
 
 .container {
     text-align: center;
+    position: relative;
 }
 
 #canvas {
     background-color: black;
-    border: none; /* Без рамки */
+    border: none;
     cursor: crosshair;
+    transform-origin: top left;
 }
 
 .tools {
@@ -31,4 +34,9 @@ button {
     border: none;
     padding: 10px;
     cursor: pointer;
+    margin: 5px;
+}
+
+#zoomIn, #zoomOut {
+    font-size: 18px;
 }
